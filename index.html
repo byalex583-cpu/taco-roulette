@@ -1309,11 +1309,9 @@
         }
 
         async function loadTaceriasFromAPI() {
-            const svg = document.getElementById('rouletteSvg');
-            const spinBtn = document.getElementById('spinBtn');
             try {
-                svg.innerHTML = '<text x="200" y="195" text-anchor="middle" font-size="14" fill="#FEDB5B" font-family="Space Mono">Cargando...</text><text x="200" y="215" text-anchor="middle" font-size="11" fill="#CBBEB6" font-family="Space Mono">Un momento</text>';
-                if (spinBtn) spinBtn.disabled = true;
+                rouletteSvg.innerHTML = '<text x="200" y="195" text-anchor="middle" font-size="14" fill="#FEDB5B" font-family="Space Mono">Cargando...</text><text x="200" y="215" text-anchor="middle" font-size="11" fill="#CBBEB6" font-family="Space Mono">Un momento</text>';
+                spinBtn.disabled = true;
 
                 const response = await fetch(API_URL, {
                     redirect: 'follow',
@@ -1326,14 +1324,16 @@
                     id: taqueria.ID,
                     name: taqueria.Nombre,
                     municipality: taqueria.Municipio,
-                    location: taqueria.Dirección,
-                    horarios: taqueria.Horarios,
-                    rating: taqueria.Rating,
-                    ticket: taqueria.Ticket_Promedio,
+                    location: taqueria.Dirección || taqueria.Direccion || '',
+                    horarios: taqueria.Horarios || '',
+                    rating: taqueria.Rating || 0,
+                    ticket: taqueria.Ticket_Promedio || 0,
                     budget: getPresupuestoCategory(taqueria.Ticket_Promedio),
-                    types: Array.isArray(taqueria.Tipos_Tacos) ? taqueria.Tipos_Tacos : [taqueria.Tipos_Tacos],
-                    description: taqueria.Descripción,
-                    foto: taqueria.Foto_URL,
+                    types: Array.isArray(taqueria.Tipos_Tacos)
+                        ? taqueria.Tipos_Tacos.filter(Boolean)
+                        : (taqueria.Tipos_Tacos ? [taqueria.Tipos_Tacos] : []),
+                    description: taqueria.Descripción || taqueria.Descripcion || '',
+                    foto: taqueria.Foto_URL || '',
                     metodos_pago: taqueria.Metodos_Pago || 'Efectivo, Tarjeta'
                 }));
 
@@ -1342,16 +1342,14 @@
 
             } catch (error) {
                 console.error('Error cargando taquerías:', error);
-                svg.innerHTML = '<text x="200" y="185" text-anchor="middle" font-size="14" fill="#FEDB5B" font-family="Space Mono">Sin conexión</text><text x="200" y="210" text-anchor="middle" font-size="11" fill="#CBBEB6" font-family="Space Mono">Verifica tu red</text>';
-                if (spinBtn) {
-                    spinBtn.disabled = false;
-                    spinBtn.textContent = 'Reintentar';
-                    spinBtn.onclick = () => {
-                        spinBtn.textContent = 'Gira la ruleta';
-                        spinBtn.onclick = null;
-                        loadTaceriasFromAPI();
-                    };
-                }
+                rouletteSvg.innerHTML = '<text x="200" y="185" text-anchor="middle" font-size="14" fill="#FEDB5B" font-family="Space Mono">Sin conexión</text><text x="200" y="210" text-anchor="middle" font-size="11" fill="#CBBEB6" font-family="Space Mono">Verifica tu red</text>';
+                spinBtn.disabled = false;
+                spinBtn.textContent = 'Reintentar';
+                spinBtn.onclick = () => {
+                    spinBtn.textContent = 'Gira la ruleta';
+                    spinBtn.onclick = null;
+                    loadTaceriasFromAPI();
+                };
             }
         }
 
@@ -1421,6 +1419,10 @@
             const colors = ['#FEDB5B', '#0F3822'];
             rouletteSvg.innerHTML = '';
 
+            // Más sectores → texto más pequeño y más corto
+            const maxChars = filtered.length <= 6 ? 14 : filtered.length <= 12 ? 11 : 8;
+            const fontSize = filtered.length <= 6 ? 11 : filtered.length <= 12 ? 10 : 9;
+
             filtered.forEach((taceria, index) => {
                 const startAngle = (index * sliceAngle - 90) * (Math.PI / 180);
                 const endAngle = ((index + 1) * sliceAngle - 90) * (Math.PI / 180);
@@ -1434,10 +1436,8 @@
                 const bgColor = colors[index % 2];
                 const textColor = index % 2 === 0 ? '#0F3822' : '#FEDB5B';
 
-                const pathStr = `M 200 200 L ${x1} ${y1} A 200 200 0 ${isLarge} 1 ${x2} ${y2} Z`;
-
                 const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                path.setAttribute('d', pathStr);
+                path.setAttribute('d', `M 200 200 L ${x1} ${y1} A 200 200 0 ${isLarge} 1 ${x2} ${y2} Z`);
                 path.setAttribute('fill', bgColor);
                 path.setAttribute('stroke', '#0F3822');
                 path.setAttribute('stroke-width', '3');
@@ -1448,17 +1448,20 @@
                 const textX = 200 + 120 * Math.cos(midAngle);
                 const textY = 200 + 120 * Math.sin(midAngle);
 
+                const label = taceria.name.toUpperCase();
+                const displayText = label.length > maxChars ? label.substring(0, maxChars - 1) + '…' : label;
+
                 const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                 text.setAttribute('x', textX);
                 text.setAttribute('y', textY);
                 text.setAttribute('text-anchor', 'middle');
                 text.setAttribute('dominant-baseline', 'middle');
                 text.setAttribute('fill', textColor);
-                text.setAttribute('font-size', '10');
+                text.setAttribute('font-size', fontSize);
                 text.setAttribute('font-weight', '700');
                 text.setAttribute('font-family', 'Space Mono, monospace');
                 text.setAttribute('transform', `rotate(${midAngleDeg}, ${textX}, ${textY})`);
-                text.textContent = taceria.name.toUpperCase().substring(0, 12);
+                text.textContent = displayText;
                 rouletteSvg.appendChild(text);
             });
 
@@ -1475,11 +1478,19 @@
             spinBtn.disabled = true;
             stopIdleSpin();
 
+            const sliceAngle = 360 / filtered.length;
             const randomSpin = Math.random() * 360 + 1800;
-            const selectedIndex = Math.floor((randomSpin % 360) / (360 / filtered.length));
+            const finalRotation = currentRotation + randomSpin;
+
+            // La aguja apunta hacia arriba (0°). Después de rotar el SVG `finalRotation`
+            // grados en sentido horario, la posición original que queda bajo la aguja es:
+            //   needleAngle = ((-finalRotation) mod 360 + 360) mod 360
+            // Eso nos da qué sector está bajo la aguja.
+            const needleAngle = ((-finalRotation % 360) + 360) % 360;
+            const selectedIndex = Math.floor(needleAngle / sliceAngle) % filtered.length;
             selectedTaceria = filtered[selectedIndex];
 
-            currentRotation += randomSpin;
+            currentRotation = finalRotation;
             rouletteSvg.style.transition = 'transform 3.5s cubic-bezier(0.2, 0.0, 0.0, 1.0)';
             rouletteSvg.style.transform = `rotate(${currentRotation}deg)`;
 
