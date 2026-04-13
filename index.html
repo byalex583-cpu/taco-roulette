@@ -719,37 +719,193 @@
         @media (max-width: 1024px) {
             .main-content {
                 grid-template-columns: 1fr;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .roulette-section {
+                width: 100%;
+                order: 2;
+            }
+
+            .stats {
+                flex-direction: row;
+                width: 100%;
+                order: 1;
+                justify-content: center;
+                gap: 1rem;
+            }
+
+            .stat-card {
+                flex: 1;
+                max-width: 120px;
             }
 
             .roulette-wrapper {
                 width: 300px;
                 height: 300px;
             }
-
-            .stats {
-                flex-direction: row;
-            }
         }
 
         @media (max-width: 768px) {
+            header {
+                padding: 0.8rem 1rem;
+            }
+
+            .header-logo {
+                height: 44px;
+            }
+
+            .nav-btn {
+                padding: 0.5rem 0.9rem;
+                font-size: 11px;
+            }
+
             .filters-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: 1fr 1fr;
+                gap: 0.8rem;
             }
 
             .container {
-                padding: 1rem;
+                padding: 0.9rem;
+            }
+
+            .hero {
+                margin-bottom: 1rem;
             }
 
             .hero h1 {
-                font-size: 1.8rem;
+                font-size: 1.6rem;
+            }
+
+            .hero p {
+                font-size: 0.85rem;
+            }
+
+            .filters-section {
+                padding: 0.9rem;
+                margin-bottom: 1rem;
             }
 
             .modal-content {
-                padding: 1.5rem;
+                padding: 1.2rem;
             }
 
             .modal-details {
                 grid-template-columns: 1fr;
+            }
+
+            .modal-title {
+                font-size: 1.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            header {
+                padding: 0.6rem 0.8rem;
+            }
+
+            .header-logo {
+                height: 36px;
+            }
+
+            .nav-btn {
+                padding: 0.45rem 0.7rem;
+                font-size: 10px;
+                letter-spacing: 0;
+            }
+
+            .container {
+                padding: 0.75rem;
+            }
+
+            .hero {
+                margin-bottom: 0.8rem;
+            }
+
+            .hero h1 {
+                font-size: 1.3rem;
+            }
+
+            .hero p {
+                display: none;
+            }
+
+            .filters-section {
+                padding: 0.75rem;
+                margin-bottom: 0.8rem;
+            }
+
+            .filters-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 0.6rem;
+            }
+
+            .filter-label {
+                font-size: 0.7rem;
+            }
+
+            .filter-btn {
+                padding: 0.35rem 0.65rem;
+                font-size: 0.7rem;
+            }
+
+            .roulette-wrapper {
+                width: 260px;
+                height: 260px;
+            }
+
+            .spin-button {
+                padding: 0.85rem 2.5rem;
+                font-size: 13px;
+                width: 100%;
+                max-width: 280px;
+            }
+
+            .stats {
+                flex-direction: row;
+                gap: 0.5rem;
+            }
+
+            .stat-card {
+                padding: 0.8rem 0.5rem;
+                flex: 1;
+            }
+
+            .stat-number {
+                font-size: 1.6rem;
+            }
+
+            .stat-label {
+                font-size: 0.65rem;
+            }
+
+            .main-content {
+                gap: 0.8rem;
+            }
+
+            .stat-card {
+                max-width: none;
+            }
+
+            .modal-content {
+                padding: 1rem;
+                border-radius: 12px;
+            }
+
+            .modal-title {
+                font-size: 1.3rem;
+            }
+
+            .modal-buttons {
+                flex-direction: column;
+                gap: 0.6rem;
+            }
+
+            footer {
+                padding: 1rem;
+                font-size: 0.75rem;
             }
         }
     </style>
@@ -787,7 +943,7 @@
                         </div>
 
                         <div class="filter-group">
-                            <label class="filter-label">🌮 Tipo Tacos</label>
+                            <label class="filter-label">🌮 Tipo de Tacos</label>
                             <div class="filter-buttons">
                                 <button class="filter-btn" data-filter="types" data-value="Al pastor">Pastor</button>
                                 <button class="filter-btn" data-filter="types" data-value="Carne asada">Asada</button>
@@ -806,7 +962,7 @@
                         </div>
 
                         <div class="filter-group">
-                            <label class="filter-label">💳 Método Pago</label>
+                            <label class="filter-label">💳 Método de Pago</label>
                             <div class="filter-buttons">
                                 <button class="filter-btn" data-filter="payment" data-value="Efectivo">Efectivo</button>
                                 <button class="filter-btn" data-filter="payment" data-value="Tarjeta">Tarjeta</button>
@@ -943,10 +1099,19 @@
         }
 
         async function loadTaceriasFromAPI() {
+            const svg = document.getElementById('rouletteSvg');
+            const spinBtn = document.getElementById('spinBtn');
             try {
-                const response = await fetch(API_URL);
+                svg.innerHTML = '<text x="200" y="195" text-anchor="middle" font-size="14" fill="#FEDB5B" font-family="Space Mono">Cargando...</text><text x="200" y="215" text-anchor="middle" font-size="11" fill="#CBBEB6" font-family="Space Mono">Un momento</text>';
+                if (spinBtn) spinBtn.disabled = true;
+
+                const response = await fetch(API_URL, {
+                    redirect: 'follow',
+                    cache: 'no-cache'
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const data = await response.json();
-                
+
                 TACERIAS_DB = data.map(taqueria => ({
                     id: taqueria.ID,
                     name: taqueria.Nombre,
@@ -961,13 +1126,22 @@
                     foto: taqueria.Foto_URL,
                     metodos_pago: taqueria.Metodos_Pago || 'Efectivo, Tarjeta'
                 }));
-                
+
                 console.log('Taquerías cargadas:', TACERIAS_DB.length);
                 initializeApp();
-                
+
             } catch (error) {
                 console.error('Error cargando taquerías:', error);
-                document.getElementById('rouletteSvg').innerHTML = '<text x="200" y="200" text-anchor="middle" font-size="16" fill="#FEDB5B">Error cargando datos</text>';
+                svg.innerHTML = '<text x="200" y="185" text-anchor="middle" font-size="14" fill="#FEDB5B" font-family="Space Mono">Sin conexión</text><text x="200" y="210" text-anchor="middle" font-size="11" fill="#CBBEB6" font-family="Space Mono">Verifica tu red</text>';
+                if (spinBtn) {
+                    spinBtn.disabled = false;
+                    spinBtn.textContent = 'Reintentar';
+                    spinBtn.onclick = () => {
+                        spinBtn.textContent = 'Gira la ruleta';
+                        spinBtn.onclick = null;
+                        loadTaceriasFromAPI();
+                    };
+                }
             }
         }
 
@@ -1361,6 +1535,10 @@
 
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') hideTaceriaModal();
+                if (e.key === ' ' && !taceriaModal.classList.contains('active')) {
+                    e.preventDefault();
+                    spin();
+                }
             });
 
             document.getElementById('year').textContent = new Date().getFullYear();
